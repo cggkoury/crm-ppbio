@@ -1,0 +1,848 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CRM PPBio | Idesam</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<script>
+  tailwind.config = {
+    theme: { extend: { colors: {
+      verde:   { 50:'#e8f5e9', 100:'#c8e6c9', 500:'#4caf50', 700:'#388e3c', 900:'#1b5e20' },
+      idesam:  { DEFAULT:'#1b5e20', light:'#388e3c', pale:'#e8f5e9' }
+    }}}
+  }
+</script>
+<style>
+  body { font-family: 'Segoe UI', Arial, sans-serif; }
+  .page { display:none; }
+  .page.active { display:block; }
+  .nav-btn.active { background:#1b5e20; color:#fff; }
+  .status-Lead        { background:#e3f2fd; color:#1565c0; }
+  .status-Qualificado { background:#fff9c4; color:#f57f17; }
+  .status-Proposta    { background:#e8f5e9; color:#2e7d32; }
+  .status-Negociacao  { background:#fff3e0; color:#e65100; }
+  .status-Fechado     { background:#c8e6c9; color:#1b5e20; }
+  .status-Perdido     { background:#ffcdd2; color:#b71c1c; }
+  .esg-high  { background:#c8e6c9; color:#1b5e20; }
+  .esg-mid   { background:#fff9c4; color:#f57f17; }
+  .esg-low   { background:#ffe0b2; color:#e65100; }
+  .esg-none  { background:#ffcdd2; color:#b71c1c; }
+  .spinner { border:3px solid #e8f5e9; border-top:3px solid #1b5e20; border-radius:50%; width:24px; height:24px; animation:spin .8s linear infinite; display:inline-block; }
+  @keyframes spin { to { transform:rotate(360deg); } }
+  .modal-overlay { position:fixed; inset:0; background:rgba(0,0,0,.45); z-index:50; display:flex; align-items:center; justify-content:center; }
+  .modal-box { background:#fff; border-radius:12px; padding:28px; width:100%; max-width:560px; max-height:90vh; overflow-y:auto; box-shadow:0 20px 60px rgba(0,0,0,.3); }
+  input, select, textarea { transition: border-color .15s; }
+  input:focus, select:focus, textarea:focus { outline:none; border-color:#1b5e20; box-shadow:0 0 0 3px rgba(27,94,32,.12); }
+  .toast { position:fixed; bottom:24px; right:24px; padding:12px 20px; border-radius:8px; font-weight:600; z-index:999; animation:fadeIn .3s; }
+  @keyframes fadeIn { from{opacity:0;transform:translateY(10px)} to{opacity:1;transform:translateY(0)} }
+</style>
+</head>
+<body class="bg-gray-50 min-h-screen">
+
+<!-- HEADER -->
+<header class="bg-verde-900 text-white shadow-lg sticky top-0 z-40">
+  <div class="max-w-7xl mx-auto px-4 py-3 flex items-center justify-between">
+    <div class="flex items-center gap-3">
+      <div class="w-9 h-9 rounded-full bg-verde-500 flex items-center justify-center font-bold text-sm">PB</div>
+      <div>
+        <div class="font-bold text-base leading-tight">CRM PPBio</div>
+        <div class="text-verde-100 text-xs">Idesam · Polo Industrial de Manaus</div>
+      </div>
+    </div>
+    <nav class="flex gap-1">
+      <button onclick="goTo('dashboard')" class="nav-btn px-3 py-1.5 rounded-md text-sm font-medium hover:bg-verde-700 transition" data-page="dashboard">Dashboard</button>
+      <button onclick="goTo('empresas')" class="nav-btn px-3 py-1.5 rounded-md text-sm font-medium hover:bg-verde-700 transition" data-page="empresas">Empresas</button>
+      <button onclick="goTo('pipeline')" class="nav-btn px-3 py-1.5 rounded-md text-sm font-medium hover:bg-verde-700 transition" data-page="pipeline">Pipeline</button>
+      <button onclick="goTo('contatos')" class="nav-btn px-3 py-1.5 rounded-md text-sm font-medium hover:bg-verde-700 transition" data-page="contatos">Contatos</button>
+    </nav>
+  </div>
+</header>
+
+<!-- ============================================================ PAGE: DASHBOARD -->
+<div id="page-dashboard" class="page active max-w-7xl mx-auto px-4 py-6">
+  <div class="flex items-center justify-between mb-6">
+    <h1 class="text-2xl font-bold text-gray-800">Dashboard PPBio 2026</h1>
+    <div id="user-label" class="text-sm text-gray-500 bg-white px-3 py-1 rounded-full border"></div>
+  </div>
+
+  <!-- KPI Cards -->
+  <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+    <div class="bg-white rounded-xl p-4 shadow-sm border-l-4 border-verde-700">
+      <div class="text-xs text-gray-500 font-medium uppercase tracking-wide">Empresas</div>
+      <div id="kpi-empresas" class="text-3xl font-bold text-verde-900 mt-1">—</div>
+    </div>
+    <div class="bg-white rounded-xl p-4 shadow-sm border-l-4 border-blue-500">
+      <div class="text-xs text-gray-500 font-medium uppercase tracking-wide">Pipeline</div>
+      <div id="kpi-pipeline" class="text-3xl font-bold text-blue-700 mt-1">—</div>
+    </div>
+    <div class="bg-white rounded-xl p-4 shadow-sm border-l-4 border-orange-500">
+      <div class="text-xs text-gray-500 font-medium uppercase tracking-wide">Valor Total</div>
+      <div id="kpi-valor" class="text-2xl font-bold text-orange-700 mt-1">—</div>
+    </div>
+    <div class="bg-white rounded-xl p-4 shadow-sm border-l-4 border-purple-500">
+      <div class="text-xs text-gray-500 font-medium uppercase tracking-wide">Contatos (30d)</div>
+      <div id="kpi-contatos30" class="text-3xl font-bold text-purple-700 mt-1">—</div>
+    </div>
+  </div>
+
+  <!-- Funil + Follow-ups -->
+  <div class="grid md:grid-cols-2 gap-4 mb-6">
+    <div class="bg-white rounded-xl p-5 shadow-sm">
+      <h3 class="font-semibold text-gray-700 mb-4">Funil de Relacionamento</h3>
+      <div id="funil-chart" class="space-y-2"></div>
+    </div>
+    <div class="bg-white rounded-xl p-5 shadow-sm">
+      <h3 class="font-semibold text-gray-700 mb-3">Follow-ups Pendentes</h3>
+      <div id="followups-list" class="space-y-2 text-sm"></div>
+    </div>
+  </div>
+
+  <!-- Atividade recente -->
+  <div class="bg-white rounded-xl p-5 shadow-sm">
+    <h3 class="font-semibold text-gray-700 mb-3">Atividade Recente</h3>
+    <div id="atividade-recente" class="space-y-2 text-sm"></div>
+  </div>
+</div>
+
+<!-- ============================================================ PAGE: EMPRESAS -->
+<div id="page-empresas" class="page max-w-7xl mx-auto px-4 py-6">
+  <div class="flex flex-wrap items-center justify-between gap-3 mb-5">
+    <h1 class="text-2xl font-bold text-gray-800">Empresas PIM</h1>
+    <div class="flex gap-2 flex-wrap">
+      <input id="search-empresa" type="text" placeholder="Buscar empresa..." oninput="filtrarEmpresas()"
+        class="border border-gray-300 rounded-lg px-3 py-2 text-sm w-56">
+      <select id="filter-status" onchange="filtrarEmpresas()"
+        class="border border-gray-300 rounded-lg px-3 py-2 text-sm">
+        <option value="">Todos os status</option>
+        <option>Lead</option><option>Qualificado</option><option>Proposta</option>
+        <option>Negociacao</option><option>Fechado</option><option>Perdido</option>
+      </select>
+      <select id="filter-setor" onchange="filtrarEmpresas()"
+        class="border border-gray-300 rounded-lg px-3 py-2 text-sm">
+        <option value="">Todos os setores</option>
+        <option>Eletroeletronico</option><option>Informatica</option>
+        <option>Duas Rodas</option><option>Componentes EMS</option>
+        <option>Quimico</option><option>Eletromecânico</option><option>Eletrodomestico</option>
+      </select>
+    </div>
+  </div>
+  <div id="loading-empresas" class="flex justify-center py-12"><div class="spinner"></div></div>
+  <div id="table-empresas" class="hidden bg-white rounded-xl shadow-sm overflow-hidden">
+    <table class="w-full text-sm">
+      <thead class="bg-verde-900 text-white">
+        <tr>
+          <th class="px-3 py-3 text-left font-semibold">Empresa</th>
+          <th class="px-3 py-3 text-left font-semibold hidden md:table-cell">Setor</th>
+          <th class="px-3 py-3 text-left font-semibold">Contato</th>
+          <th class="px-3 py-3 text-center font-semibold hidden md:table-cell">ESG</th>
+          <th class="px-3 py-3 text-center font-semibold">Status</th>
+          <th class="px-3 py-3 text-center font-semibold">Acoes</th>
+        </tr>
+      </thead>
+      <tbody id="tbody-empresas"></tbody>
+    </table>
+  </div>
+  <div id="no-empresas" class="hidden text-center py-12 text-gray-400">Nenhuma empresa encontrada</div>
+</div>
+
+<!-- ============================================================ PAGE: PIPELINE -->
+<div id="page-pipeline" class="page max-w-7xl mx-auto px-4 py-6">
+  <div class="flex items-center justify-between mb-5">
+    <h1 class="text-2xl font-bold text-gray-800">Pipeline de Oportunidades</h1>
+    <button onclick="abrirModalPipeline()" class="bg-orange-600 hover:bg-orange-700 text-white px-4 py-2 rounded-lg text-sm font-semibold flex items-center gap-2 shadow">
+      + Nova Oportunidade
+    </button>
+  </div>
+  <!-- Kanban por estágio -->
+  <div id="loading-pipeline" class="flex justify-center py-12"><div class="spinner"></div></div>
+  <div id="kanban-pipeline" class="hidden grid grid-cols-2 md:grid-cols-4 gap-3"></div>
+  <div class="mt-6 bg-white rounded-xl shadow-sm overflow-hidden hidden md:block">
+    <table class="w-full text-sm">
+      <thead class="bg-verde-900 text-white">
+        <tr>
+          <th class="px-3 py-3 text-left">ID</th>
+          <th class="px-3 py-3 text-left">Empresa</th>
+          <th class="px-3 py-3 text-left">Projeto</th>
+          <th class="px-3 py-3 text-right">Valor (R$)</th>
+          <th class="px-3 py-3 text-center">Estagio</th>
+          <th class="px-3 py-3 text-center">Prob.</th>
+          <th class="px-3 py-3 text-center">Responsavel</th>
+          <th class="px-3 py-3 text-left">Proxima Acao</th>
+        </tr>
+      </thead>
+      <tbody id="tbody-pipeline"></tbody>
+    </table>
+  </div>
+</div>
+
+<!-- ============================================================ PAGE: CONTATOS -->
+<div id="page-contatos" class="page max-w-7xl mx-auto px-4 py-6">
+  <div class="flex items-center justify-between mb-5">
+    <h1 class="text-2xl font-bold text-gray-800">Historico de Contatos</h1>
+    <button onclick="abrirModalContato()" class="bg-verde-700 hover:bg-verde-900 text-white px-4 py-2 rounded-lg text-sm font-semibold flex items-center gap-2 shadow">
+      + Registrar Contato
+    </button>
+  </div>
+  <div id="loading-contatos" class="flex justify-center py-12"><div class="spinner"></div></div>
+  <div id="table-contatos" class="hidden bg-white rounded-xl shadow-sm overflow-hidden">
+    <table class="w-full text-sm">
+      <thead class="bg-verde-900 text-white">
+        <tr>
+          <th class="px-3 py-3 text-left">Data</th>
+          <th class="px-3 py-3 text-left">Empresa</th>
+          <th class="px-3 py-3 text-left hidden md:table-cell">Contato</th>
+          <th class="px-3 py-3 text-center">Tipo</th>
+          <th class="px-3 py-3 text-left">Resumo</th>
+          <th class="px-3 py-3 text-left hidden md:table-cell">Proxima Acao</th>
+          <th class="px-3 py-3 text-left hidden md:table-cell">Responsavel</th>
+        </tr>
+      </thead>
+      <tbody id="tbody-contatos"></tbody>
+    </table>
+  </div>
+  <div id="no-contatos" class="hidden text-center py-12 text-gray-400">Nenhum contato registrado ainda</div>
+</div>
+
+<!-- ============================================================ MODAL: REGISTRAR CONTATO -->
+<div id="modal-contato" class="modal-overlay hidden">
+  <div class="modal-box">
+    <h2 class="text-lg font-bold text-verde-900 mb-5">Registrar Contato</h2>
+    <form id="form-contato" onsubmit="salvarContato(event)">
+      <div class="grid grid-cols-2 gap-3 mb-3">
+        <div>
+          <label class="text-xs font-semibold text-gray-600 block mb-1">Empresa *</label>
+          <select id="c-empresa" required class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm">
+            <option value="">Selecione...</option>
+          </select>
+        </div>
+        <div>
+          <label class="text-xs font-semibold text-gray-600 block mb-1">Tipo *</label>
+          <select id="c-tipo" required class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm">
+            <option>Reuniao</option><option>Ligacao</option><option>E-mail</option>
+            <option>WhatsApp</option><option>Evento</option><option>LinkedIn</option><option>Outro</option>
+          </select>
+        </div>
+      </div>
+      <div class="grid grid-cols-2 gap-3 mb-3">
+        <div>
+          <label class="text-xs font-semibold text-gray-600 block mb-1">Contato (nome) *</label>
+          <input id="c-contato" type="text" required placeholder="Nome do contato" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm">
+        </div>
+        <div>
+          <label class="text-xs font-semibold text-gray-600 block mb-1">Responsavel Idesam *</label>
+          <input id="c-responsavel" type="text" required placeholder="Seu nome" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm">
+        </div>
+      </div>
+      <div class="mb-3">
+        <label class="text-xs font-semibold text-gray-600 block mb-1">Resumo da interacao *</label>
+        <textarea id="c-resumo" required rows="3" placeholder="O que foi discutido, decisoes, proximos passos combinados..." class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm resize-none"></textarea>
+      </div>
+      <div class="grid grid-cols-2 gap-3 mb-3">
+        <div>
+          <label class="text-xs font-semibold text-gray-600 block mb-1">Proxima acao</label>
+          <input id="c-proxacao" type="text" placeholder="Ex: Enviar proposta" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm">
+        </div>
+        <div>
+          <label class="text-xs font-semibold text-gray-600 block mb-1">Data da proxima acao</label>
+          <input id="c-dataprox" type="date" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm">
+        </div>
+      </div>
+      <div class="mb-5">
+        <label class="text-xs font-semibold text-gray-600 block mb-1">Projeto vinculado</label>
+        <input id="c-projeto" type="text" placeholder="Ex: P01, P19 ou deixe em branco" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm">
+      </div>
+      <div class="flex gap-3 justify-end">
+        <button type="button" onclick="fecharModal('modal-contato')" class="px-4 py-2 rounded-lg border border-gray-300 text-sm font-medium text-gray-600 hover:bg-gray-50">Cancelar</button>
+        <button type="submit" id="btn-salvar-contato" class="px-5 py-2 bg-verde-700 hover:bg-verde-900 text-white rounded-lg text-sm font-semibold">Salvar</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- ============================================================ MODAL: NOVA OPORTUNIDADE -->
+<div id="modal-pipeline" class="modal-overlay hidden">
+  <div class="modal-box">
+    <h2 class="text-lg font-bold text-verde-900 mb-5">Nova Oportunidade</h2>
+    <form id="form-pipeline" onsubmit="salvarPipeline(event)">
+      <div class="grid grid-cols-2 gap-3 mb-3">
+        <div>
+          <label class="text-xs font-semibold text-gray-600 block mb-1">Empresa *</label>
+          <select id="p-empresa" required class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm">
+            <option value="">Selecione...</option>
+          </select>
+        </div>
+        <div>
+          <label class="text-xs font-semibold text-gray-600 block mb-1">Projeto PPBio *</label>
+          <select id="p-projeto" required class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm">
+            <option value="">Selecione...</option>
+          </select>
+        </div>
+      </div>
+      <div class="grid grid-cols-3 gap-3 mb-3">
+        <div>
+          <label class="text-xs font-semibold text-gray-600 block mb-1">Valor (R$) *</label>
+          <input id="p-valor" type="number" required min="0" placeholder="1000000" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm">
+        </div>
+        <div>
+          <label class="text-xs font-semibold text-gray-600 block mb-1">Estagio *</label>
+          <select id="p-estagio" required class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm">
+            <option>Prospeccao</option><option>Qualificacao</option><option>Apresentacao</option>
+            <option>Proposta</option><option>Negociacao</option>
+          </select>
+        </div>
+        <div>
+          <label class="text-xs font-semibold text-gray-600 block mb-1">Probabilidade %</label>
+          <input id="p-prob" type="number" min="0" max="100" placeholder="25" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm">
+        </div>
+      </div>
+      <div class="grid grid-cols-2 gap-3 mb-3">
+        <div>
+          <label class="text-xs font-semibold text-gray-600 block mb-1">Responsavel Idesam *</label>
+          <input id="p-responsavel" type="text" required placeholder="Seu nome" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm">
+        </div>
+        <div>
+          <label class="text-xs font-semibold text-gray-600 block mb-1">Previsao de fechamento</label>
+          <input id="p-fechamento" type="date" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm">
+        </div>
+      </div>
+      <div class="mb-5">
+        <label class="text-xs font-semibold text-gray-600 block mb-1">Proxima acao *</label>
+        <input id="p-proxacao" type="text" required placeholder="Ex: Agendar reuniao tecnica" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm">
+      </div>
+      <div class="flex gap-3 justify-end">
+        <button type="button" onclick="fecharModal('modal-pipeline')" class="px-4 py-2 rounded-lg border border-gray-300 text-sm font-medium text-gray-600 hover:bg-gray-50">Cancelar</button>
+        <button type="submit" id="btn-salvar-pipeline" class="px-5 py-2 bg-orange-600 hover:bg-orange-700 text-white rounded-lg text-sm font-semibold">Salvar</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- ============================================================ MODAL: DETALHE EMPRESA -->
+<div id="modal-empresa" class="modal-overlay hidden">
+  <div class="modal-box max-w-2xl">
+    <div id="empresa-detalhe-content"></div>
+    <div class="flex gap-3 mt-5">
+      <button onclick="abrirModalContatoEmpresa()" class="flex-1 bg-verde-700 hover:bg-verde-900 text-white py-2 rounded-lg text-sm font-semibold">Registrar Contato</button>
+      <button onclick="abrirModalPipelineEmpresa()" class="flex-1 bg-orange-600 hover:bg-orange-700 text-white py-2 rounded-lg text-sm font-semibold">Novo Pipeline</button>
+      <button onclick="fecharModal('modal-empresa')" class="px-4 py-2 border border-gray-300 rounded-lg text-sm text-gray-600 hover:bg-gray-50">Fechar</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ============================================================
+// CONFIGURACAO - altere a URL do site SharePoint aqui
+// ============================================================
+const SITE_URL = "https://idesam.sharepoint.com/sites/CRM-Comercial";
+const LISTS = { empresas:"CRM_Empresas", contatos:"CRM_Contatos", pipeline:"CRM_Pipeline", projetos:"CRM_Projetos" };
+
+// Cache
+let _empresas=[], _pipeline=[], _contatos=[], _projetos=[];
+let _empresaSelecionada = null;
+
+// ============================================================
+// API SharePoint REST
+// ============================================================
+async function spGet(list, select="*", filter="", top=500, orderby="") {
+  let url = `${SITE_URL}/_api/web/lists/getbytitle('${list}')/items?$top=${top}&$select=${select}`;
+  if (filter)  url += `&$filter=${encodeURIComponent(filter)}`;
+  if (orderby) url += `&$orderby=${encodeURIComponent(orderby)}`;
+  const res = await fetch(url, { credentials:"include", headers:{ Accept:"application/json;odata=nometadata" } });
+  if (!res.ok) throw new Error(`Erro ao ler ${list}: ${res.status}`);
+  const data = await res.json();
+  return data.value;
+}
+
+async function spPost(list, payload) {
+  const digest = await getDigest();
+  const url = `${SITE_URL}/_api/web/lists/getbytitle('${list}')/items`;
+  const res = await fetch(url, {
+    method: "POST",
+    credentials: "include",
+    headers: {
+      "Accept":          "application/json;odata=nometadata",
+      "Content-Type":    "application/json;odata=nometadata",
+      "X-RequestDigest": digest
+    },
+    body: JSON.stringify(payload)
+  });
+  if (!res.ok) {
+    const err = await res.text();
+    throw new Error(`Erro ao salvar em ${list}: ${err}`);
+  }
+  return await res.json();
+}
+
+async function spPatch(list, id, payload) {
+  const digest = await getDigest();
+  const url = `${SITE_URL}/_api/web/lists/getbytitle('${list}')/items(${id})`;
+  const res = await fetch(url, {
+    method: "PATCH",
+    credentials: "include",
+    headers: {
+      "Accept":          "application/json;odata=nometadata",
+      "Content-Type":    "application/json;odata=nometadata",
+      "X-RequestDigest": digest,
+      "IF-MATCH":        "*",
+      "X-HTTP-Method":   "MERGE"
+    },
+    body: JSON.stringify(payload)
+  });
+  if (!res.ok) throw new Error(`Erro ao atualizar ${list}: ${res.status}`);
+}
+
+let _digestCache = null, _digestExpiry = 0;
+async function getDigest() {
+  if (_digestCache && Date.now() < _digestExpiry) return _digestCache;
+  const res = await fetch(`${SITE_URL}/_api/contextinfo`, {
+    method: "POST", credentials: "include", headers:{ Accept:"application/json;odata=nometadata" }
+  });
+  const data = await res.json();
+  _digestCache = data.FormDigestValue;
+  _digestExpiry = Date.now() + (data.FormDigestTimeoutSeconds - 60) * 1000;
+  return _digestCache;
+}
+
+// ============================================================
+// NAVEGACAO
+// ============================================================
+const pageLoaders = { dashboard:carregarDashboard, empresas:carregarEmpresas, pipeline:carregarPipeline, contatos:carregarContatos };
+
+function goTo(page) {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+  document.getElementById(`page-${page}`).classList.add('active');
+  document.querySelector(`.nav-btn[data-page="${page}"]`)?.classList.add('active');
+  if (pageLoaders[page]) pageLoaders[page]();
+  window.location.hash = page;
+}
+
+// ============================================================
+// UTILITARIOS
+// ============================================================
+function fmt(v) { return v ? new Intl.NumberFormat('pt-BR',{style:'decimal',maximumFractionDigits:0}).format(v) : '—'; }
+function fmtR(v) { return v ? 'R$ '+new Intl.NumberFormat('pt-BR',{maximumFractionDigits:0}).format(v) : '—'; }
+function fmtD(d) { if (!d) return '—'; const x=new Date(d); return x.toLocaleDateString('pt-BR'); }
+function statusBadge(s) { return `<span class="status-${s} text-xs font-bold px-2 py-0.5 rounded-full">${s}</span>`; }
+function esgBadge(n) {
+  const cls = n>=7?'esg-high':n>=5?'esg-mid':n>=3?'esg-low':'esg-none';
+  return `<span class="${cls} text-xs font-bold px-2 py-0.5 rounded-full">${n}/9</span>`;
+}
+function toast(msg, type='success') {
+  const t = document.createElement('div');
+  t.className = `toast ${type==='error'?'bg-red-600':'bg-verde-700'} text-white text-sm`;
+  t.textContent = msg;
+  document.body.appendChild(t);
+  setTimeout(()=>t.remove(), 3500);
+}
+function fecharModal(id) { document.getElementById(id).classList.add('hidden'); }
+
+// ============================================================
+// DASHBOARD
+// ============================================================
+async function carregarDashboard() {
+  try {
+    if (!_empresas.length) _empresas = await spGet(LISTS.empresas, "Title,NomeEmpresa,Status,ESGMaturidade,ContatoPrincipal,DataProxContato,ResponsavelIdesam");
+    if (!_pipeline.length) _pipeline = await spGet(LISTS.pipeline, "Title,EmpresaNome,ValorProposto,Estagio,Probabilidade,ProximaAcao,DataProximaAcao");
+    if (!_contatos.length) _contatos = await spGet(LISTS.contatos, "Title,DataContato,EmpresaNome,TipoContato,ResumoInteracao,ResponsavelIdesam,ProximaAcao,DataProximaAcao", "", 200, "DataContato desc");
+
+    document.getElementById('kpi-empresas').textContent = _empresas.length;
+    document.getElementById('kpi-pipeline').textContent = _pipeline.filter(p=>!['Fechado','Perdido'].includes(p.Estagio)).length;
+
+    const total = _pipeline.filter(p=>p.Estagio!=='Perdido').reduce((s,p)=>s+(p.ValorProposto||0),0);
+    document.getElementById('kpi-valor').textContent = total>=1e6 ? 'R$'+fmt(total/1e6)+'M' : fmtR(total);
+
+    const d30 = new Date(); d30.setDate(d30.getDate()-30);
+    const cnt30 = _contatos.filter(c=>c.DataContato && new Date(c.DataContato)>=d30).length;
+    document.getElementById('kpi-contatos30').textContent = cnt30;
+
+    // Funil
+    const estagios = ['Lead','Qualificado','Proposta','Negociacao','Fechado'];
+    const cores = {'Lead':'bg-blue-200','Qualificado':'bg-yellow-200','Proposta':'bg-green-200','Negociacao':'bg-orange-200','Fechado':'bg-verde-500'};
+    const funil = document.getElementById('funil-chart');
+    funil.innerHTML = '';
+    estagios.forEach(e=>{
+      const n = _empresas.filter(x=>x.Status===e).length;
+      const pct = _empresas.length ? Math.round(n/_empresas.length*100) : 0;
+      funil.innerHTML += `<div class="flex items-center gap-3">
+        <span class="w-24 text-xs text-right text-gray-600 font-medium">${e}</span>
+        <div class="flex-1 bg-gray-100 rounded-full h-6 overflow-hidden">
+          <div class="${cores[e]||'bg-gray-300'} h-full rounded-full flex items-center justify-end pr-2 text-xs font-bold text-gray-700 transition-all" style="width:${Math.max(pct,4)}%">${n}</div>
+        </div></div>`;
+    });
+
+    // Follow-ups
+    const hoje = new Date(); hoje.setHours(0,0,0,0);
+    const fups = _empresas.filter(e=>e.DataProxContato && new Date(e.DataProxContato)<=new Date(hoje.getTime()+7*86400000))
+      .sort((a,b)=>new Date(a.DataProxContato)-new Date(b.DataProxContato)).slice(0,8);
+    const fuDiv = document.getElementById('followups-list');
+    fuDiv.innerHTML = fups.length ? fups.map(e=>{
+      const d = new Date(e.DataProxContato); const diff = Math.round((d-hoje)/86400000);
+      const cor = diff<0?'text-red-600 font-bold':diff===0?'text-orange-600 font-bold':'text-gray-600';
+      return `<div class="flex items-center justify-between py-1 border-b border-gray-100">
+        <span class="text-gray-800 truncate max-w-xs">${e.NomeEmpresa||e.Title}</span>
+        <span class="${cor} text-xs ml-2 whitespace-nowrap">${diff<0?'Atrasado '+Math.abs(diff)+'d':diff===0?'Hoje':'Em '+diff+'d'}</span></div>`;
+    }).join('') : '<p class="text-gray-400 text-center py-4">Nenhum follow-up pendente</p>';
+
+    // Atividade recente
+    const recente = document.getElementById('atividade-recente');
+    recente.innerHTML = _contatos.slice(0,6).map(c=>`
+      <div class="flex items-start gap-3 py-2 border-b border-gray-100">
+        <div class="w-8 h-8 rounded-full bg-verde-100 flex items-center justify-center text-verde-700 text-xs font-bold flex-shrink-0">${(c.TipoContato||'?')[0]}</div>
+        <div class="flex-1 min-w-0">
+          <div class="flex items-center gap-2">
+            <span class="font-medium text-gray-800">${c.EmpresaNome||'—'}</span>
+            <span class="text-xs text-gray-400">${fmtD(c.DataContato)}</span>
+          </div>
+          <p class="text-gray-500 truncate">${c.ResumoInteracao||'—'}</p>
+        </div>
+        <span class="text-xs text-gray-400 flex-shrink-0">${c.ResponsavelIdesam||''}</span>
+      </div>`).join('') || '<p class="text-gray-400 text-center py-4">Nenhuma atividade registrada</p>';
+
+  } catch(e) { console.error(e); toast('Erro ao carregar dashboard: '+e.message, 'error'); }
+}
+
+// ============================================================
+// EMPRESAS
+// ============================================================
+let _empresasAll = [];
+async function carregarEmpresas() {
+  document.getElementById('loading-empresas').classList.remove('hidden');
+  document.getElementById('table-empresas').classList.add('hidden');
+  try {
+    _empresasAll = await spGet(LISTS.empresas,
+      "Id,Title,NomeEmpresa,Setor,Porte,FaturamentoEstimado,ObrigacaoPD_Rmi,ContatoPrincipal,CargoContato,EmailContato,TelefoneContato,LinkedIn,Status,ResponsavelIdesam,DataProxContato,Observacoes,ESGMaturidade",
+      "", 100, "NomeEmpresa asc");
+    _empresas = _empresasAll;
+    renderEmpresas(_empresasAll);
+  } catch(e) { toast('Erro ao carregar empresas: '+e.message,'error'); }
+  document.getElementById('loading-empresas').classList.add('hidden');
+}
+
+function renderEmpresas(list) {
+  const tb = document.getElementById('tbody-empresas');
+  const tbl = document.getElementById('table-empresas');
+  const noEl = document.getElementById('no-empresas');
+  if (!list.length) { tbl.classList.add('hidden'); noEl.classList.remove('hidden'); return; }
+  noEl.classList.add('hidden'); tbl.classList.remove('hidden');
+  tb.innerHTML = list.map((e,i)=>`
+    <tr class="${i%2===0?'bg-white':'bg-gray-50'} hover:bg-verde-50 cursor-pointer transition" onclick="verEmpresa(${e.Id})">
+      <td class="px-3 py-3">
+        <div class="font-medium text-gray-800 text-sm">${e.NomeEmpresa||e.Title}</div>
+        <div class="text-xs text-gray-400">${e.Title} · ${e.Porte||'—'} · PD: R$${e.ObrigacaoPD_Rmi||'—'}mi</div>
+      </td>
+      <td class="px-3 py-3 text-xs text-gray-600 hidden md:table-cell">${e.Setor||'—'}</td>
+      <td class="px-3 py-3">
+        <div class="text-sm font-medium text-gray-700">${e.ContatoPrincipal||'—'}</div>
+        <div class="text-xs text-gray-400">${e.CargoContato||''}</div>
+      </td>
+      <td class="px-3 py-3 text-center hidden md:table-cell">${esgBadge(e.ESGMaturidade||0)}</td>
+      <td class="px-3 py-3 text-center">${statusBadge(e.Status||'Lead')}</td>
+      <td class="px-3 py-3 text-center">
+        <button onclick="event.stopPropagation();abrirModalContatoComEmpresa(${e.Id},'${(e.NomeEmpresa||'').replace(/'/g,"\'")}')" class="text-xs bg-verde-700 text-white px-2 py-1 rounded mr-1 hover:bg-verde-900">Contato</button>
+        <button onclick="event.stopPropagation();abrirModalPipelineComEmpresa(${e.Id},'${(e.NomeEmpresa||'').replace(/'/g,"\'")}')" class="text-xs bg-orange-500 text-white px-2 py-1 rounded hover:bg-orange-700">Pipeline</button>
+      </td>
+    </tr>`).join('');
+}
+
+function filtrarEmpresas() {
+  const q = document.getElementById('search-empresa').value.toLowerCase();
+  const st = document.getElementById('filter-status').value;
+  const se = document.getElementById('filter-setor').value;
+  const f = _empresasAll.filter(e=>{
+    const nome = (e.NomeEmpresa||e.Title||'').toLowerCase();
+    return (!q||nome.includes(q)) && (!st||e.Status===st) && (!se||e.Setor===se);
+  });
+  renderEmpresas(f);
+}
+
+function verEmpresa(id) {
+  const e = _empresasAll.find(x=>x.Id===id);
+  if (!e) return;
+  _empresaSelecionada = e;
+  document.getElementById('empresa-detalhe-content').innerHTML = `
+    <div class="flex items-start justify-between mb-4">
+      <div>
+        <h2 class="text-lg font-bold text-verde-900">${e.NomeEmpresa||e.Title}</h2>
+        <p class="text-sm text-gray-500">${e.Title} · ${e.CNPJ||''}</p>
+      </div>
+      ${statusBadge(e.Status||'Lead')}
+    </div>
+    <div class="grid grid-cols-2 gap-3 text-sm mb-4">
+      <div><span class="text-gray-400">Setor:</span> <span class="font-medium">${e.Setor||'—'}</span></div>
+      <div><span class="text-gray-400">Porte:</span> <span class="font-medium">${e.Porte||'—'}</span></div>
+      <div><span class="text-gray-400">Fat. Estimado:</span> <span class="font-medium">R$ ${e.FaturamentoEstimado||'—'}bi</span></div>
+      <div><span class="text-gray-400">Obrigacao PD:</span> <span class="font-medium text-orange-700">R$ ${e.ObrigacaoPD_Rmi||'—'}mi</span></div>
+      <div><span class="text-gray-400">ESG:</span> ${esgBadge(e.ESGMaturidade||0)}</div>
+      <div><span class="text-gray-400">Prox. Contato:</span> <span class="font-medium">${fmtD(e.DataProxContato)}</span></div>
+    </div>
+    <div class="border-t pt-3 mb-3">
+      <p class="text-xs text-gray-400 font-semibold mb-1">CONTATO PRINCIPAL</p>
+      <p class="font-medium text-gray-800">${e.ContatoPrincipal||'—'} <span class="text-gray-400 font-normal">· ${e.CargoContato||''}</span></p>
+      <p class="text-sm text-blue-600">${e.EmailContato||''}</p>
+      <p class="text-sm text-gray-600">${e.TelefoneContato||''}</p>
+    </div>
+    ${e.Observacoes ? `<div class="bg-verde-50 rounded-lg p-3 text-sm text-gray-700"><p class="text-xs font-semibold text-verde-700 mb-1">OBSERVACOES ESG / ESTRATEGIA</p>${e.Observacoes}</div>` : ''}`;
+  document.getElementById('modal-empresa').classList.remove('hidden');
+}
+
+// ============================================================
+// PIPELINE
+// ============================================================
+async function carregarPipeline() {
+  document.getElementById('loading-pipeline').classList.remove('hidden');
+  document.getElementById('kanban-pipeline').classList.add('hidden');
+  try {
+    _pipeline = await spGet(LISTS.pipeline, "Id,Title,EmpresaNome,ProjetoPPBio,ValorProposto,Estagio,Probabilidade,ValorPonderado,DataAbertura,PrevisaoFechamento,ResponsavelIdesam,ProximaAcao,DataProximaAcao,Observacoes", "", 200, "DataProximaAcao asc");
+    renderPipeline(_pipeline);
+    renderKanban(_pipeline);
+  } catch(e) { toast('Erro ao carregar pipeline: '+e.message,'error'); }
+  document.getElementById('loading-pipeline').classList.add('hidden');
+  document.getElementById('kanban-pipeline').classList.remove('hidden');
+}
+
+function renderKanban(data) {
+  const estagios = ['Prospeccao','Qualificacao','Apresentacao','Proposta','Negociacao'];
+  const cores = {'Prospeccao':'border-blue-300','Qualificacao':'border-yellow-400','Apresentacao':'border-purple-300','Proposta':'border-orange-400','Negociacao':'border-green-500'};
+  const kanban = document.getElementById('kanban-pipeline');
+  kanban.innerHTML = estagios.map(e=>{
+    const itens = data.filter(p=>p.Estagio===e);
+    const tot = itens.reduce((s,p)=>s+(p.ValorProposto||0),0);
+    return `<div class="bg-white rounded-xl shadow-sm border-t-4 ${cores[e]||'border-gray-300'} p-3">
+      <div class="font-semibold text-gray-700 text-sm mb-1">${e}</div>
+      <div class="text-xs text-gray-400 mb-3">${itens.length} op · ${tot>=1e6?'R$'+fmt(tot/1e6)+'M':fmtR(tot)}</div>
+      <div class="space-y-2">${itens.slice(0,5).map(p=>`
+        <div class="bg-gray-50 rounded-lg p-2 text-xs">
+          <div class="font-medium text-gray-700 truncate">${p.EmpresaNome||'—'}</div>
+          <div class="text-gray-500 truncate">${p.ProjetoPPBio||''}</div>
+          <div class="flex justify-between mt-1">
+            <span class="text-orange-600 font-bold">${p.ValorProposto>=1e6?'R$'+fmt(p.ValorProposto/1e6)+'M':fmtR(p.ValorProposto)}</span>
+            <span class="text-gray-400">${p.Probabilidade||'—'}%</span>
+          </div>
+        </div>`).join('')}</div>
+    </div>`;
+  }).join('');
+}
+
+function renderPipeline(data) {
+  const tb = document.getElementById('tbody-pipeline');
+  tb.innerHTML = data.filter(p=>!['Perdido'].includes(p.Estagio)).map((p,i)=>`
+    <tr class="${i%2===0?'bg-white':'bg-gray-50'} hover:bg-orange-50 transition">
+      <td class="px-3 py-2 text-xs text-gray-400">${p.Title}</td>
+      <td class="px-3 py-2 text-sm font-medium text-gray-800">${p.EmpresaNome||'—'}</td>
+      <td class="px-3 py-2 text-sm text-gray-600">${p.ProjetoPPBio||'—'}</td>
+      <td class="px-3 py-2 text-sm text-right font-medium text-orange-700">${fmtR(p.ValorProposto)}</td>
+      <td class="px-3 py-2 text-center">${statusBadge(p.Estagio)}</td>
+      <td class="px-3 py-2 text-center text-sm">${p.Probabilidade||'—'}%</td>
+      <td class="px-3 py-2 text-center text-xs text-gray-500">${p.ResponsavelIdesam||'—'}</td>
+      <td class="px-3 py-2 text-xs text-gray-600">${p.ProximaAcao||'—'}<br><span class="text-gray-400">${fmtD(p.DataProximaAcao)}</span></td>
+    </tr>`).join('');
+}
+
+// ============================================================
+// CONTATOS
+// ============================================================
+async function carregarContatos() {
+  document.getElementById('loading-contatos').classList.remove('hidden');
+  document.getElementById('table-contatos').classList.add('hidden');
+  try {
+    _contatos = await spGet(LISTS.contatos, "Id,Title,DataContato,EmpresaNome,NomeContato,TipoContato,ResponsavelIdesam,ResumoInteracao,ProximaAcao,DataProximaAcao,ProjetoVinculado", "", 300, "DataContato desc");
+    renderContatos(_contatos);
+  } catch(e) { toast('Erro ao carregar contatos: '+e.message,'error'); }
+  document.getElementById('loading-contatos').classList.add('hidden');
+}
+
+function renderContatos(data) {
+  const tb = document.getElementById('tbody-contatos');
+  const tbl = document.getElementById('table-contatos');
+  const noEl = document.getElementById('no-contatos');
+  if (!data.length) { tbl.classList.add('hidden'); noEl.classList.remove('hidden'); return; }
+  noEl.classList.add('hidden'); tbl.classList.remove('hidden');
+  const tipoIcn = {'Reuniao':'🤝','Ligacao':'📞','E-mail':'✉️','WhatsApp':'💬','Evento':'🎪','LinkedIn':'🔗','Outro':'📌'};
+  tb.innerHTML = data.map((c,i)=>`
+    <tr class="${i%2===0?'bg-white':'bg-gray-50'} hover:bg-blue-50 transition">
+      <td class="px-3 py-2 text-xs text-gray-500 whitespace-nowrap">${fmtD(c.DataContato)}</td>
+      <td class="px-3 py-2 text-sm font-medium text-gray-800">${c.EmpresaNome||'—'}</td>
+      <td class="px-3 py-2 text-sm text-gray-600 hidden md:table-cell">${c.NomeContato||'—'}</td>
+      <td class="px-3 py-2 text-center text-sm">${tipoIcn[c.TipoContato]||'📌'} ${c.TipoContato||'—'}</td>
+      <td class="px-3 py-2 text-sm text-gray-600 max-w-xs truncate">${c.ResumoInteracao||'—'}</td>
+      <td class="px-3 py-2 text-xs text-gray-500 hidden md:table-cell">${c.ProximaAcao||'—'}<br>${fmtD(c.DataProximaAcao)}</td>
+      <td class="px-3 py-2 text-xs text-gray-400 hidden md:table-cell">${c.ResponsavelIdesam||'—'}</td>
+    </tr>`).join('');
+}
+
+// ============================================================
+// SALVAR CONTATO
+// ============================================================
+async function salvarContato(ev) {
+  ev.preventDefault();
+  const btn = document.getElementById('btn-salvar-contato');
+  btn.disabled = true; btn.textContent = 'Salvando...';
+  try {
+    const empresaNome = document.getElementById('c-empresa').options[document.getElementById('c-empresa').selectedIndex]?.text || '';
+    const dataProxVal = document.getElementById('c-dataprox').value;
+    const payload = {
+      "Title":            "CT-"+Date.now(),
+      "DataContato":      new Date().toISOString(),
+      "EmpresaNome":      empresaNome,
+      "NomeContato":      document.getElementById('c-contato').value,
+      "TipoContato":      document.getElementById('c-tipo').value,
+      "ResponsavelIdesam":document.getElementById('c-responsavel').value,
+      "ResumoInteracao":  document.getElementById('c-resumo').value,
+      "ProximaAcao":      document.getElementById('c-proxacao').value,
+      "ProjetoVinculado": document.getElementById('c-projeto').value || '--'
+    };
+    if (dataProxVal) payload.DataProximaAcao = new Date(dataProxVal).toISOString();
+    await spPost(LISTS.contatos, payload);
+
+    // Atualiza DataProxContato na empresa
+    const empId = document.getElementById('c-empresa').value;
+    if (empId && dataProxVal) {
+      await spPatch(LISTS.empresas, empId, { "DataProxContato": new Date(dataProxVal).toISOString() });
+    }
+
+    fecharModal('modal-contato');
+    document.getElementById('form-contato').reset();
+    _contatos = []; _empresas = [];
+    toast('Contato registrado com sucesso!');
+    if (document.getElementById('page-contatos').classList.contains('active')) carregarContatos();
+    if (document.getElementById('page-dashboard').classList.contains('active')) carregarDashboard();
+  } catch(e) {
+    toast('Erro: '+e.message,'error');
+  }
+  btn.disabled = false; btn.textContent = 'Salvar';
+}
+
+// ============================================================
+// SALVAR PIPELINE
+// ============================================================
+async function salvarPipeline(ev) {
+  ev.preventDefault();
+  const btn = document.getElementById('btn-salvar-pipeline');
+  btn.disabled = true; btn.textContent = 'Salvando...';
+  try {
+    const empresaNome = document.getElementById('p-empresa').options[document.getElementById('p-empresa').selectedIndex]?.text || '';
+    const projetoNome = document.getElementById('p-projeto').options[document.getElementById('p-projeto').selectedIndex]?.text || '';
+    const valor = parseFloat(document.getElementById('p-valor').value)||0;
+    const prob  = parseFloat(document.getElementById('p-prob').value)||0;
+    const fechVal = document.getElementById('p-fechamento').value;
+    const payload = {
+      "Title":               "OP-"+Date.now(),
+      "EmpresaNome":         empresaNome,
+      "ProjetoPPBio":        projetoNome,
+      "ValorProposto":       valor,
+      "Estagio":             document.getElementById('p-estagio').value,
+      "Probabilidade":       prob,
+      "ValorPonderado":      valor * prob / 100,
+      "DataAbertura":        new Date().toISOString(),
+      "ResponsavelIdesam":   document.getElementById('p-responsavel').value,
+      "ProximaAcao":         document.getElementById('p-proxacao').value
+    };
+    if (fechVal) payload.PrevisaoFechamento = new Date(fechVal).toISOString();
+    await spPost(LISTS.pipeline, payload);
+    fecharModal('modal-pipeline');
+    document.getElementById('form-pipeline').reset();
+    _pipeline = [];
+    toast('Oportunidade criada!');
+    if (document.getElementById('page-pipeline').classList.contains('active')) carregarPipeline();
+  } catch(e) {
+    toast('Erro: '+e.message,'error');
+  }
+  btn.disabled = false; btn.textContent = 'Salvar';
+}
+
+// ============================================================
+// ABRIR MODAIS
+// ============================================================
+function popularSelectEmpresas(selectId, empresaId=null, empresaNome=null) {
+  const sel = document.getElementById(selectId);
+  sel.innerHTML = '<option value="">Selecione a empresa...</option>';
+  const lista = _empresasAll.length ? _empresasAll : _empresas;
+  lista.sort((a,b)=>(a.NomeEmpresa||'').localeCompare(b.NomeEmpresa||'')).forEach(e=>{
+    const op = document.createElement('option');
+    op.value = e.Id;
+    op.textContent = e.NomeEmpresa || e.Title;
+    if (e.Id === empresaId) op.selected = true;
+    sel.appendChild(op);
+  });
+  if (empresaNome && !empresaId) {
+    [...sel.options].forEach(o=>{ if(o.text===empresaNome) o.selected=true; });
+  }
+}
+
+async function popularSelectProjetos() {
+  if (!_projetos.length) _projetos = await spGet(LISTS.projetos, "Id,Title,IDProjeto", "", 30);
+  const sel = document.getElementById('p-projeto');
+  sel.innerHTML = '<option value="">Selecione o projeto...</option>';
+  _projetos.forEach(p=>{
+    const op = document.createElement('option'); op.value = p.Id;
+    op.textContent = `${p.IDProjeto} - ${p.Title}`; sel.appendChild(op);
+  });
+}
+
+async function abrirModalContato(empresaId=null, empresaNome=null) {
+  if (!_empresasAll.length) _empresasAll = await spGet(LISTS.empresas,"Id,NomeEmpresa,Title","",100,"NomeEmpresa asc");
+  popularSelectEmpresas('c-empresa', empresaId, empresaNome);
+  // Pre-preenche responsavel com usuario logado se disponivel
+  const respEl = document.getElementById('c-responsavel');
+  if (!respEl.value) {
+    try {
+      const me = await fetch(`${SITE_URL}/_api/web/currentuser`, { headers:{Accept:"application/json;odata=nometadata"} });
+      const u = await me.json(); if (u.Title) respEl.value = u.Title;
+    } catch(e) {}
+  }
+  document.getElementById('modal-contato').classList.remove('hidden');
+}
+
+async function abrirModalPipeline(empresaId=null, empresaNome=null) {
+  if (!_empresasAll.length) _empresasAll = await spGet(LISTS.empresas,"Id,NomeEmpresa,Title","",100,"NomeEmpresa asc");
+  popularSelectEmpresas('p-empresa', empresaId, empresaNome);
+  await popularSelectProjetos();
+  const respEl = document.getElementById('p-responsavel');
+  if (!respEl.value) {
+    try {
+      const me = await fetch(`${SITE_URL}/_api/web/currentuser`, { headers:{Accept:"application/json;odata=nometadata"} });
+      const u = await me.json(); if (u.Title) respEl.value = u.Title;
+    } catch(e) {}
+  }
+  document.getElementById('modal-pipeline').classList.remove('hidden');
+}
+
+function abrirModalContatoEmpresa() {
+  fecharModal('modal-empresa');
+  if (_empresaSelecionada) abrirModalContato(_empresaSelecionada.Id, _empresaSelecionada.NomeEmpresa);
+}
+function abrirModalPipelineEmpresa() {
+  fecharModal('modal-empresa');
+  if (_empresaSelecionada) abrirModalPipeline(_empresaSelecionada.Id, _empresaSelecionada.NomeEmpresa);
+}
+function abrirModalContatoComEmpresa(id, nome) { abrirModalContato(id, nome); }
+function abrirModalPipelineComEmpresa(id, nome) { abrirModalPipeline(id, nome); }
+
+// Fecha modais ao clicar fora
+document.querySelectorAll('.modal-overlay').forEach(m=>{
+  m.addEventListener('click', e=>{ if(e.target===m) m.classList.add('hidden'); });
+});
+
+// ============================================================
+// INICIALIZACAO
+// ============================================================
+async function init() {
+  // Detecta usuario logado
+  try {
+    const me = await fetch(`${SITE_URL}/_api/web/currentuser`, { headers:{Accept:"application/json;odata=nometadata"} });
+    const u = await me.json();
+    document.getElementById('user-label').textContent = u.Title || 'Conectado';
+  } catch(e) {
+    document.getElementById('user-label').textContent = 'Modo offline';
+  }
+  // Rota inicial
+  const hash = window.location.hash.replace('#','') || 'dashboard';
+  goTo(hash);
+}
+
+init();
+</script>
+</body>
+</html>
