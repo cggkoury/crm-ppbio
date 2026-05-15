@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>CRM PPBio | Idesam</title>
 <script src="https://cdn.tailwindcss.com"></script>
-<script src="https://alcdn.msauth.net/browser/3.26.1/js/msal-browser.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@azure/msal-browser@2.38.4/dist/msal-browser.min.js"></script>
 <script>
   tailwind.config = {
     theme: { extend: { colors: {
@@ -350,17 +350,15 @@ const SP_SCOPES = ["https://idesam.sharepoint.com/AllSites.Manage"];
 
 let _msalInstance = null;
 
-async function getMsal() {
-  if (_msalInstance) return _msalInstance;
-  _msalInstance = new msal.PublicClientApplication(MSAL_CONFIG);
-  await _msalInstance.initialize();
+function getMsal() {
+  if (!_msalInstance) _msalInstance = new msal.PublicClientApplication(MSAL_CONFIG);
   return _msalInstance;
 }
 
 let _tokenCache = null, _tokenExpiry = 0;
 async function getToken() {
   if (_tokenCache && Date.now() < _tokenExpiry) return _tokenCache;
-  const inst = await getMsal();
+  const inst = getMsal();
   const accounts = inst.getAllAccounts();
   if (!accounts.length) {
     const r = await inst.loginPopup({ scopes: SP_SCOPES });
@@ -392,7 +390,7 @@ function atualizarUserLabel(account) {
 
 async function login() {
   try {
-    const inst = await getMsal();
+    const inst = getMsal();
     const r = await inst.loginPopup({ scopes: SP_SCOPES });
     inst.setActiveAccount(r.account);
     atualizarUserLabel(r.account);
@@ -402,7 +400,7 @@ async function login() {
 }
 
 async function logout() {
-  const inst = await getMsal();
+  const inst = getMsal();
   _tokenCache = null;
   await inst.logoutPopup();
   atualizarUserLabel(null);
@@ -912,7 +910,7 @@ document.querySelectorAll('.modal-overlay').forEach(m=>{
 // INICIALIZACAO
 // ============================================================
 async function init() {
-  const inst = await getMsal();
+  const inst = getMsal();
   const accounts = inst.getAllAccounts();
   if (accounts.length > 0) {
     inst.setActiveAccount(accounts[0]);
